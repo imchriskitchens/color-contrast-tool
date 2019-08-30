@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<title>Color Contrast Tool</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<link rel="stylesheet" href="./css/style.css">
+	</head>
+	<body>
+		<div id="preview">
+			<p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</p>
+		</div>
+		<main id="main">
+			<div id="bg_group" class="group">
+				<label for="bg_color">Background Color <input type="text" id="bg_color" value="rgb(0, 0, 0)" onclick="this.select()">
+				</label>
+			</div>
+			<div id="font_group" class="group">
+				<label for="font_color">Font Color <input type="text" id="font_color" value="rgb(18, 136, 177)" onclick="this.select()">
+				</label>
+			</div>
+			<div id="wcag" class="group">
+				<p class="test">AA: <span id="passAA" class="pass">[PASS]</span><span id="failAA" class="fail">[FAIL]</span></p>
+				<p class="test">AAA: <span id="passAAA" class="pass">[PASS]</span><span id="failAAA" class="fail">[FAIL]</span></p>
+				<p id="ratio" class="test">21</p>
+			</div>
+		</main>
+		<script src="./js/index.js"></script>
+	</body>
+</html>
