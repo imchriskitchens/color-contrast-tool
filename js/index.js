@@ -1,24 +1,5 @@
-const main = document.getElementById('main');
-const preview = document.getElementById('preview');
-const txt = preview.querySelector('p');
-
-// 
-const bg_group = document.getElementById('bg_group');
-const bg_group_lbls = bg_group.querySelectorAll('label');
-const bg_color = document.getElementById('bg_color');
-
-// 
-const font_group = document.getElementById('font_group');
-const font_group_lbls = font_group.querySelectorAll('label');
-const font_color = document.getElementById('font_color');
-
-
-// wcag group
-const passAA = document.getElementById('passAA');
-const failAA = document.getElementById('failAA');
-const passAAA = document.getElementById('passAAA');
-const failAAA = document.getElementById('failAAA');
-const ratio = document.getElementById('ratio');
+const bg_group_label = bg_group.querySelector('label');
+const font_group_label = font_group.querySelector('label');
 
 
 // ------------------------------------------------------- RANDOM COLORS ON START
@@ -30,150 +11,196 @@ const randNum1 = () => Math.floor(Math.random() * (116)) + 140; // increase pass
 const randColor0 = () => `rgb(${randNum0(36)}, ${randNum0(16)}, ${randNum0(76)})`;
 const randColor1 = () => `rgb(${randNum1()}, ${randNum1()}, ${randNum1()})`;
 
+
 // ------------------------------------------------------------------------------
 
+const colorUtil = {
+  isHEX: /(^#[a-f\d]{6}$)|(^#[a-f\d]{3}$)/i,
+  isRGB: /^rgb\((\s*\d{1,3}\s*),(\s*\d{1,3}\s*),(\s*\d{1,3}\s*)\)$/i,
+  isHSL: /^hsl\((\s*\d{1,3}\s*),(\s*\d{1,3}%\s*),(\s*\d{1,3}%\s*)\)$/i,
 
-// auto contrast labels
-function ccRGB(rgb) {
-    let [r, g, b] = rgb.match(/\d+/g);
-    [r, g, b] = [r * 0.2126, g * 0.7152, b * 0.0722];
+  hexString({ r, g, b }) { return `#${r}${g}${b}` /**/ .toUpperCase() /**/ ; },
+  rgbString({ r, g, b }) { return `rgb(${r}, ${g}, ${b})`; },
+  hslString({ h, s, l }) { return `hsl(${h}, ${s}%, ${l}%)`; },
+
+  clampRGB(value) {
+    let [r, g, b] = value.match(/-?\d+/g);
+    [r, g, b] = new Uint8ClampedArray([r, g, b]);
+    return colorUtil.rgbString({ r, g, b });
+  },
+
+  rgbToHEX(value, { data } = false) {
+    let [r, g, b] = value.match(/\d+/g);
+    [r, g, b] = [r, g, b].map((n) => parseInt(n, 10).toString(16));
+    [r, g, b] = [r, g, b].map((n) => n.length === 1 ? `0${n}` : n);
+    return (data) ? ([r, g, b]) : colorUtil.hexString({ r, g, b });
+  },
+
+  rgbToHSL(value, { data } = false) {
+    let [r, g, b] = (Array.isArray(value)) ? value: value.match(/\d+/g);
+    [r, g, b] = [r, g, b].map((v) => v / 255);
+    let cmin = Math.min(r, g, b);
+    let cmax = Math.max(r, g, b);
+    let c = cmax - cmin;
+    let [h, s, l] = [0, 0, (cmax + cmin) * 0.5];
+    if (c !== 0) {
+      h = // condition hue value
+        (cmax === r) ? ((g - b) / c) % 6 :
+        (cmax === g) ? (b - r) / c + 2 :
+        (r - g) / c + 4; // (cmax === b)
+      s = c / (1 - Math.abs(cmax + cmin - 1));
+    }
+    [h, s, l] = [h * 60, s * 100, l * 100];
+    if (h < 0) h += 360; // neg hue correction
+    [h, s, l] = [h, s, l].map((n) => parseInt(n));
+    return (data) ? ([h, s, l]) : colorUtil.hslString({ h, s, l });
+  },
+
+  hslToRGB(value, { data } = false) {
+    let [h, s, l] = value.match(/\d+/g);
+    [h, s, l] = [h / 60, s / 100, l / 100];
+    let c = s * (1 - Math.abs(2 * l - 1));
+    let x = c * (1 - Math.abs(h % 2 - 1));
+    let m = l - c / 2;
+    [c, x, m] = [(c + m), (x + m), m].map((v) => Math.round(v * 255));
+    [c, x, m] = [c, x, m].map((v) => (v < 1) ? 0 : v);
+    let [r, g, b] = [[c, x, m], [x, c, m], [m, c, x], [m, x, c], [x, m, c], [c, m, x]][Math.floor(h) % 6];
+    return (data) ? ([r, g, b]) : colorUtil.rgbString({ r, g, b });
+  },
+
+  hslToHEX(value, { data } = false) {
+    let [r, g, b] = colorUtil.hslToRGB(value, { data: true });
+    [r, g, b] = [r, g, b].map((n) => parseInt(n, 10).toString(16));
+    [r, g, b] = [r, g, b].map((n) => n.length === 1 ? `0${n}` : n);
+    return (data) ? ([r, g, b]) : colorUtil.hexString({ r, g, b });
+  },
+
+  hexToRGB(value, { data } = false) {
+    value = value.replace("#", "");
+    value = (value.length === 3) ? ("0x" + ([...value]).map((ch) =>
+      `${ch}${ch}`).join("")) : `0x${value}`;
+    const [r, g, b] = [(value >> 16), (value >> 8), value].map((n) => n & 255);
+    return (data) ? ([r, g, b]) : colorUtil.rgbString({ r, g, b });
+  },
+
+  hexToHSL(value) {
+    const [r, g, b] = colorUtil.hexToRGB(value, { data: true });
+    return colorUtil.rgbToHSL([r, g, b]);
+  },
+
+  autoContrast(value) {
+    let [r, g, b] = value.match(/\d+/g);
+   [r, g, b] = [r * 0.2126, g * 0.7152, b * 0.0722];
     return (r + g + b) >= 128 ? "black" : "white";
-}
+  },
 
-// update all bg_group components
-const setBgColors = (c) => {
-    bg_color.value = c;
-    bg_group.style.background = c;
-    preview.style.background = c;
-    bg_group_lbls.forEach(lbl => {
-        lbl.style.color = ccRGB(c);
-    });
-}
-setBgColors(randColor0());
+  getContrast(colorA, colorB) {
+    const lin_sRGB = (v) => (v < 0.04045) ?
+      (v / 12.92) : ((v + 0.055) / 1.055) ** 2.4;
 
+    const LUM = (value) => {
+      let [r, g, b] = value.match(/\d+/g);
+      [r, g, b] = [r, g, b].map(v => lin_sRGB(v / 255));
+      [r, g, b] = [r * 0.2126, g * 0.7152, b * 0.0722];
+      return [r, g, b].reduce((a, b) => a + b);
+    }
 
-// update all font_group components
-const setFontColors = (c) => {
-    font_color.value = c;
-    font_group.style.background = c;
-    txt.style.color = c;
-    font_group_lbls.forEach(lbl => {
-        lbl.style.color = ccRGB(c);
-    });
-}
-setFontColors(randColor1());
-
-const getsRGB = (v) => (v <= 0.03928) ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
-
-const LUM = (color) => {
-    let [r, g, b] = color.match(/\d+/g);
-    r = getsRGB(r / 255) * 0.2126;
-    g = getsRGB(g / 255) * 0.7152;
-    b = getsRGB(b / 255) * 0.0722;
-    return r + g + b;
-}
-
-// "Contrast" was a term associated with fine art late 17th century, in the sense "juxtapose so as to bring out differences in form and color". (Etymology) Latin "contra-" against + "stare" stand.
-
-const getContrast = (colorA, colorB) => {
-    const L1 = (typeof colorA === 'string') ? LUM(colorA) : colorA;
-    const L2 = (typeof colorB === 'string') ? LUM(colorB) : colorB;
+    const [L1, L2] = [LUM(colorA), LUM(colorB)];
     const compare = (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05);
-    // truncate to two decimal places without rounding
-    const contrast = compare.toString().match(/(?:\d*([.])\d{2})/);
-		// 	"x == undefined also checks whether x is null" 
-    if (contrast != undefined) return contrast[0];
-    return (L1 === L2) ? 1 : 21;
-}
-
-// ------------------------------------------------------- ADDS HEX SUPPORT 
-
-const isHEX = /(^#?[0-9A-F]{6}$)|(^#?[0-9A-F]{3}$)/i;
-
-const convertHEX = (color) => {
-    if (color.length < 6) {
-        let [r, g, b] = color.match(/[0-9A-F]/ig);
-        color = `${[r, r, g, g, b, b].join('')}`;
-    }
-    color = `0x${color.replace("#", '')}`;
-    let [rr, gg, bb] = [color >> 16, color >> 8, color];
-    [rr, gg, bb] = [rr & 255, gg & 255, bb & 255];
-    return `rgb(${rr}, ${gg}, ${bb})`;
-}
-
-const getValue = (el) => {
-    const inputValue = el.value;
-    return (isHEX.test(inputValue)) ? convertHEX(inputValue) : inputValue;
-}
-
-// ------------------------------------------------------------------------
-const para = document.querySelector("#preview p");
-const compStyles = window.getComputedStyle(para);
-const getFontSize = () => compStyles.getPropertyValue("font-size");
-
-function result() {
-  const fsize = Number(getFontSize().replace("px", ''));
-  const [ratioAA, ratioAAA] = (fsize > 24) ? [3, 4.5] : [4.5, 7];
-
-  const testAA = (val) => (Number(val) > ratioAA) ? "PASS" : "FAIL";
-  const testAAA = (val) => (Number(val) > ratioAAA) ? "PASS" : "FAIL";
-
-    const colorOne = getValue(bg_color);
-    const colorTwo = getValue(font_color);
-    const contrastValue = getContrast(colorOne, colorTwo);
-
-    return {
-        colors: [colorOne, colorTwo],
-        contrast: contrastValue,
-        testAA: testAA(contrastValue),
-        testAAA: testAAA(contrastValue)
-    };
-}
+    return (compare != undefined) ?
+      compare.toPrecision((compare >= 10) ? 4 : 3) : (L1 === L2) ? 1 : 21;
+  },
+};
 
 // ------------------------------------------------------------------------
 
-function submit() {
+const setBgGroup = (c) => {
+  bg_color.value = c;
+  bg_group.style.background = c;
+  preview.style.background = c;
+  bg_group_label.style.color = colorUtil.autoContrast(c);
+}
+setBgGroup(randColor0());
 
-    const setAA = (grade) => {
-        if (grade === "PASS") {
-            if (passAA.hasAttribute('hidden'))
-                passAA.removeAttribute('hidden');
-            failAA.setAttribute("hidden", "true");
-        } else {
-            passAA.setAttribute("hidden", "true");
-            if (failAA.hasAttribute('hidden'))
-                failAA.removeAttribute('hidden');
-        }
+
+const setFontGroup = (c) => {
+  font_color.value = c;
+  font_group.style.background = c;
+  previewText.style.color = c;
+  font_group_label.style.color = colorUtil.autoContrast(c);
+}
+setFontGroup(randColor1());
+
+
+// ------------------------------------------------------------------------
+
+const getResult = () => {
+  const compStyles = window.getComputedStyle(previewText);
+  const fontSize = compStyles.getPropertyValue("font-size").replace("px", '');
+
+  const [ratioAA, ratioAAA] = (Number(fontSize) > 24) ? [3, 4.5] : [4.5, 7];
+  const testAA = (value) => (value > ratioAA) ? "PASS" : "FAIL";
+  const testAAA = (value) => (value > ratioAAA) ? "PASS" : "FAIL";
+
+  const [colorOne, colorTwo] = ([bg_color, font_color]).map(({ value }) => {
+    return colorUtil.isHEX.test(value) ?
+      colorUtil.hexToRGB(value) : colorUtil.clampRGB(value);
+  });
+
+  const contrastValue = colorUtil.getContrast(colorOne, colorTwo);
+
+  return {
+    colors: [colorOne, colorTwo],
+    contrast: contrastValue,
+    testAA: testAA(contrastValue),
+    testAAA: testAAA(contrastValue)
+  };
+}
+
+// ------------------------------------------------------------------------
+
+const submit = () => {
+
+  const setAA = (grade) => {
+    if (grade === "PASS") {
+      if (passAA.hasAttribute('hidden'))
+        passAA.removeAttribute('hidden');
+      failAA.setAttribute("hidden", "true");
+    } else {
+      passAA.setAttribute("hidden", "true");
+      if (failAA.hasAttribute('hidden'))
+        failAA.removeAttribute('hidden');
     }
+  }
 
-    const setAAA = (grade) => {
-        if (grade === "PASS") {
-            if (passAAA.hasAttribute('hidden'))
-                passAAA.removeAttribute('hidden');
-            failAAA.setAttribute("hidden", "true");
-        } else {
-            passAAA.setAttribute("hidden", "true");
-            if (failAAA.hasAttribute('hidden'))
-                failAAA.removeAttribute('hidden');
-        }
+  const setAAA = (grade) => {
+    if (grade === "PASS") {
+      if (passAAA.hasAttribute('hidden'))
+        passAAA.removeAttribute('hidden');
+      failAAA.setAttribute("hidden", "true");
+    } else {
+      passAAA.setAttribute("hidden", "true");
+      if (failAAA.hasAttribute('hidden'))
+        failAAA.removeAttribute('hidden');
     }
+  }
 
-    const setRatio = (value) => {
-        ratio.textContent = `Ratio: ${value}`;
-    }
+  const setRatio = (value) => {
+    ratio.textContent = `Ratio: ${value}`;
+  }
 
-    const answer = result();
-    setAA(answer.testAA);
-    setAAA(answer.testAAA);
-    setRatio(answer.contrast);
-    setBgColors(answer.colors[0]);
-    setFontColors(answer.colors[1]);
+  const result = getResult();
+  setAA(result.testAA);
+  setAAA(result.testAAA);
+  setRatio(result.contrast);
+  setBgGroup(result.colors[0]);
+  setFontGroup(result.colors[1]);
 }
 
 submit();
 
-bg_color.addEventListener('change', submit);
-font_color.addEventListener('change', submit);
+bg_color.addEventListener("change", () => submit(), false);
+font_color.addEventListener("change", () => submit(), false);
 
 
 //
