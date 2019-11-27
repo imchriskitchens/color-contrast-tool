@@ -5,6 +5,7 @@
 
 body {
   margin: 60px 10%;
+  font-size: 1.2rem;
   background: hsl(210, 16%, 8%);
 }
 
@@ -22,7 +23,6 @@ main {
 }
 
 .group {
-  grid-row: 2;
   padding-top: 20px;
   box-shadow: 0 6px 20px 0 rgba(0, 0, 0, 0.6);
 }
@@ -55,6 +55,18 @@ label {
   }
   #preview {
     grid-column: 1 / 3;
+    margin-bottom: 10px;
+  }
+  #test_group {
+    grid-column: 1 / 3;
+    grid-row: 2;
+  }
+  .test {
+    display: inline-block;
+  }
+  #bg_group,
+  #font_group {
+    grid-row: 3;
   }
 }
 
@@ -65,5 +77,21 @@ label {
 
   #preview {
     grid-column: 1 / 4;
+  }
+
+  #bg_group {
+    grid-row: 2;
+    grid-column: 1;
+  }
+  #font_group {
+    grid-row: 2;
+    grid-column: 2;
+  }
+  #test_group {
+    grid-row: 2;
+    grid-column: 3;
+  }
+  .test {
+    display: block;
   }
 }
